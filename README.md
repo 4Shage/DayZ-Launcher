@@ -46,28 +46,6 @@ cargo build --release
 
 Plik wykonywalny znajdziesz w: `target/release/dayz-launcher.exe`
 
-## 🔧 Podłączenie prawdziwego API serwerów
-
-W pliku `src/server.rs` znajdź funkcję `fetch_servers()` i zastąp mock danymi:
-
-### Opcja A: DayZ GameLabs API (oficjalne)
-```rust
-pub async fn fetch_servers() -> anyhow::Result<Vec<DayZServer>> {
-    let response = reqwest::get("https://dayzsalauncher.com/api/v1/query/server/list")
-        .await?
-        .json::<Vec<DayZServer>>()
-        .await?;
-    Ok(response)
-}
-```
-
-### Opcja B: Steam Master Server Query (protokół UDP A2S)
-Użyj biblioteki `a2s` lub `steam-query`:
-```toml
-# Cargo.toml
-a2s = "0.4"
-```
-
 ## 🎨 Modyfikacja motywu
 
 Kolory są zdefiniowane jako stałe w `src/app.rs`:
@@ -80,7 +58,7 @@ const DIM_COLOR:  Color32 = Color32::from_rgb(130, 125, 110); // Tekst drugorzę
 
 ## 📝 Następne kroki (TODO)
 
-- [ ] Podłączyć prawdziwe API serwerów DayZ
+- [x] Podłączyć prawdziwe API serwerów DayZ
 - [ ] Dodać zarządzanie modami (Steam Workshop)
 - [ ] Dodać ikonę aplikacji (.ico na Windows)
 - [ ] Implementacja prawdziwego pobierania aktualizacji przez Steam API
