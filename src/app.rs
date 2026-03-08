@@ -103,7 +103,8 @@ impl DayZLauncher {
                 let responded = self.servers.iter().filter(|s| s.ping_ms.is_some()).count();
                 self.status_message = format!(
                     "✓ Załadowano {} serwerów — {} odpowiedziało na ping.",
-                    self.servers.len(), responded
+                    self.servers.len(),
+                    responded
                 );
             }
         }
@@ -115,14 +116,16 @@ impl DayZLauncher {
                 Ok(servers) => {
                     let count = servers.len();
                     self.servers = servers;
-                    self.status_message = format!("✓ Załadowano {} serwerów. Pomiar pingu...", count);
+                    self.status_message =
+                        format!("✓ Załadowano {} serwerów. Pomiar pingu...", count);
                     // Kick off background ping for all servers
                     let (ptx, prx) = std::sync::mpsc::channel();
                     self.ping_rx = Some(prx);
                     let mut servers_for_ping = self.servers.clone();
                     self.runtime.spawn(async move {
                         crate::server::ping_servers(&mut servers_for_ping).await;
-                        let pings: Vec<Option<u32>> = servers_for_ping.iter().map(|s| s.ping_ms).collect();
+                        let pings: Vec<Option<u32>> =
+                            servers_for_ping.iter().map(|s| s.ping_ms).collect();
                         let _ = ptx.send(pings);
                     });
                 }
@@ -187,7 +190,8 @@ impl eframe::App for DayZLauncher {
         if self.servers_loading || self.ping_rx.is_some() {
             ctx.request_repaint();
         }
-        if let UpdateStatus::Downloading { .. } | UpdateStatus::Checking = self.updater.get_status() {
+        if let UpdateStatus::Downloading { .. } | UpdateStatus::Checking = self.updater.get_status()
+        {
             ctx.request_repaint();
         }
 
@@ -251,7 +255,11 @@ impl DayZLauncher {
                     .color(if is_active { Color32::WHITE } else { DIM_COLOR });
 
                 let btn = egui::Button::new(text)
-                    .fill(if is_active { RUST_DIM } else { Color32::TRANSPARENT })
+                    .fill(if is_active {
+                        RUST_DIM
+                    } else {
+                        Color32::TRANSPARENT
+                    })
                     .stroke(Stroke::NONE);
 
                 if ui.add(btn).clicked() {
@@ -299,7 +307,7 @@ impl DayZLauncher {
                 );
                 ui.add_space(4.0);
                 ui.label(
-                    RichText::new(format!("Mapa: {}", s.map))
+                    RichText::new(format!("Kraj: {}", s.country))
                         .font(FontId::proportional(11.0))
                         .color(DIM_COLOR),
                 );
@@ -334,12 +342,14 @@ impl DayZLauncher {
 
                 let desired = Vec2::new(220.0, 6.0);
                 let (rect, _) = ui.allocate_exact_size(desired, egui::Sense::hover());
-                ui.painter().rect_filled(rect, Rounding::same(3.0), PANEL_BG);
+                ui.painter()
+                    .rect_filled(rect, Rounding::same(3.0), PANEL_BG);
                 let fill_rect = egui::Rect::from_min_size(
                     rect.min,
                     Vec2::new(rect.width() * ratio, rect.height()),
                 );
-                ui.painter().rect_filled(fill_rect, Rounding::same(3.0), bar_color);
+                ui.painter()
+                    .rect_filled(fill_rect, Rounding::same(3.0), bar_color);
             } else {
                 ui.label(
                     RichText::new("Nie wybrano serwera")
@@ -443,7 +453,11 @@ impl DayZLauncher {
             let btn = egui::Button::new(
                 RichText::new("▶  URUCHOM GRĘ")
                     .font(FontId::proportional(16.0))
-                    .color(if can_launch { Color32::WHITE } else { DIM_COLOR })
+                    .color(if can_launch {
+                        Color32::WHITE
+                    } else {
+                        DIM_COLOR
+                    })
                     .strong(),
             )
             .fill(if can_launch { RUST_COLOR } else { PANEL_BG })
@@ -507,7 +521,8 @@ impl DayZLauncher {
                             .font(FontId::proportional(11.0))
                             .color(DIM_COLOR),
                     );
-                    for (label, val) in [("Brak", None), ("<60ms", Some(60)), ("<120ms", Some(120))] {
+                    for (label, val) in [("Brak", None), ("<60ms", Some(60)), ("<120ms", Some(120))]
+                    {
                         let selected = self.filters.max_ping == val;
                         let text = RichText::new(label)
                             .font(FontId::proportional(11.0))
@@ -568,7 +583,7 @@ impl DayZLauncher {
                 ui.horizontal(|ui| {
                     col_header(ui, "NAZWA SERWERA", 280.0);
                     col_header(ui, "IP:PORT", 140.0);
-                    col_header(ui, "MAPA", 100.0);
+                    col_header(ui, "KRAJ", 100.0);
                     col_header(ui, "GRACZE", 70.0);
                     col_header(ui, "PING", 60.0);
                     col_header(ui, "TYP", 85.0);
@@ -621,44 +636,106 @@ impl DayZLauncher {
                     ui.painter().rect_filled(row_rect, egui::Rounding::ZERO, bg);
 
                     // Helper: paint one text cell clipped to its column width
-                    let paint_cell = |x_offset: f32, width: f32, text: &str,
-                                      font: FontId, color: Color32| {
-                        let cell_rect = egui::Rect::from_min_size(
-                            egui::pos2(row_rect.min.x + x_offset, row_rect.min.y),
-                            egui::vec2(width - 4.0, desired_height), // 4px padding between cols
-                        );
-                        // layout_no_wrap then clip via a clipped painter — text never bleeds
-                        let galley = ui.fonts(|f| {
-                            f.layout_no_wrap(text.to_string(), font, color)
-                        });
-                        let text_pos = egui::pos2(
-                            cell_rect.min.x + 2.0,
-                            cell_rect.center().y - galley.size().y / 2.0,
-                        );
-                        // Use a painter scoped to the cell rect so text is clipped automatically
-                        ui.painter().with_clip_rect(cell_rect).galley(text_pos, galley, color);
-                    };
+                    let paint_cell =
+                        |x_offset: f32, width: f32, text: &str, font: FontId, color: Color32| {
+                            let cell_rect = egui::Rect::from_min_size(
+                                egui::pos2(row_rect.min.x + x_offset, row_rect.min.y),
+                                egui::vec2(width - 4.0, desired_height), // 4px padding between cols
+                            );
+                            // layout_no_wrap then clip via a clipped painter — text never bleeds
+                            let galley =
+                                ui.fonts(|f| f.layout_no_wrap(text.to_string(), font, color));
+                            let text_pos = egui::pos2(
+                                cell_rect.min.x + 2.0,
+                                cell_rect.center().y - galley.size().y / 2.0,
+                            );
+                            // Use a painter scoped to the cell rect so text is clipped automatically
+                            ui.painter()
+                                .with_clip_rect(cell_rect)
+                                .galley(text_pos, galley, color);
+                        };
 
-                    let name_color = if is_selected { Color32::WHITE } else { Color32::from_rgb(200, 195, 180) };
-                    let player_color = if server.fill_ratio() > 0.9 { Color32::from_rgb(220, 60, 40) } else { DIM_COLOR };
-                    let ping_text = server.ping_ms.map(|p| format!("{} ms", p)).unwrap_or_else(|| "—".into());
-                    let type_color = match server.server_type {
-                        ServerType::Official  => Color32::from_rgb(80, 140, 200),
-                        ServerType::Community => Color32::from_rgb(130, 200, 80),
-                        ServerType::Modded    => Color32::from_rgb(200, 140, 60),
+                    let name_color = if is_selected {
+                        Color32::WHITE
+                    } else {
+                        Color32::from_rgb(200, 195, 180)
                     };
-                    let mod_text = if server.mods.is_empty() { "Brak".into() } else { server.mods.len().to_string() };
-                    let mod_color = if !server.mods.is_empty() && !server.mods_installed { Color32::from_rgb(220, 60, 40) } else { DIM_COLOR };
+                    let player_color = if server.fill_ratio() > 0.9 {
+                        Color32::from_rgb(220, 60, 40)
+                    } else {
+                        DIM_COLOR
+                    };
+                    let ping_text = server
+                        .ping_ms
+                        .map(|p| format!("{} ms", p))
+                        .unwrap_or_else(|| "—".into());
+                    let type_color = match server.server_type {
+                        ServerType::Official => Color32::from_rgb(80, 140, 200),
+                        ServerType::Community => Color32::from_rgb(130, 200, 80),
+                        ServerType::Modded => Color32::from_rgb(200, 140, 60),
+                    };
+                    let mod_text = if server.mods.is_empty() {
+                        "Brak".into()
+                    } else {
+                        server.mods.len().to_string()
+                    };
+                    let mod_color = if !server.mods.is_empty() && !server.mods_installed {
+                        Color32::from_rgb(220, 60, 40)
+                    } else {
+                        DIM_COLOR
+                    };
 
                     // x offsets match the col_header widths exactly
                     let x = 12.0;
-                    paint_cell(x,         280.0, &server.name,                                    FontId::proportional(12.0), name_color);
-                    paint_cell(x + 280.0, 140.0, &server.ip,                                      FontId::monospace(10.0),    VERY_DIM);
-                    paint_cell(x + 420.0, 100.0, &server.map,                                     FontId::proportional(11.0), DIM_COLOR);
-                    paint_cell(x + 520.0,  70.0, &format!("{}/{}", server.players, server.max_players), FontId::proportional(11.0), player_color);
-                    paint_cell(x + 590.0,  60.0, &ping_text,                                      FontId::proportional(11.0), server.ping_color());
-                    paint_cell(x + 650.0,  85.0, server.server_type.label(),                      FontId::proportional(11.0), type_color);
-                    paint_cell(x + 735.0,  55.0, &mod_text,                                       FontId::proportional(11.0), mod_color);
+                    paint_cell(
+                        x,
+                        280.0,
+                        &server.name,
+                        FontId::proportional(12.0),
+                        name_color,
+                    );
+                    paint_cell(
+                        x + 280.0,
+                        140.0,
+                        &server.ip,
+                        FontId::monospace(10.0),
+                        VERY_DIM,
+                    );
+                    paint_cell(
+                        x + 420.0,
+                        100.0,
+                        &server.country,
+                        FontId::proportional(11.0),
+                        DIM_COLOR,
+                    );
+                    paint_cell(
+                        x + 520.0,
+                        70.0,
+                        &format!("{}/{}", server.players, server.max_players),
+                        FontId::proportional(11.0),
+                        player_color,
+                    );
+                    paint_cell(
+                        x + 590.0,
+                        60.0,
+                        &ping_text,
+                        FontId::proportional(11.0),
+                        server.ping_color(),
+                    );
+                    paint_cell(
+                        x + 650.0,
+                        85.0,
+                        server.server_type.label(),
+                        FontId::proportional(11.0),
+                        type_color,
+                    );
+                    paint_cell(
+                        x + 735.0,
+                        55.0,
+                        &mod_text,
+                        FontId::proportional(11.0),
+                        mod_color,
+                    );
 
                     if row_resp.clicked() {
                         self.selected_server = Some(idx);
@@ -810,7 +887,11 @@ impl DayZLauncher {
                         let btn = egui::Button::new(
                             RichText::new(lang.label()).font(FontId::proportional(11.0)),
                         )
-                        .fill(if selected { RUST_DIM } else { Color32::TRANSPARENT });
+                        .fill(if selected {
+                            RUST_DIM
+                        } else {
+                            Color32::TRANSPARENT
+                        });
                         if ui.add(btn).clicked() {
                             self.profile.game_settings.language = lang.clone();
                         }
@@ -983,8 +1064,7 @@ impl DayZLauncher {
                 ) {
                     if ui
                         .button(
-                            RichText::new("⟳  Sprawdź ponownie")
-                                .font(FontId::proportional(12.0)),
+                            RichText::new("⟳  Sprawdź ponownie").font(FontId::proportional(12.0)),
                         )
                         .clicked()
                     {

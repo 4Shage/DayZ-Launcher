@@ -17,7 +17,7 @@ pub struct DayZServer {
     pub max_players: u32,
     pub ping_ms: Option<u32>,
     pub server_type: ServerType,
-    pub map: String,
+    pub country: String,
     pub is_hardcore: bool,
     pub has_battleye: bool,
     pub time_of_day: f32,
@@ -70,7 +70,7 @@ impl DayZServer {
         if !filters.search_query.is_empty() {
             let q = filters.search_query.to_lowercase();
             if !self.name.to_lowercase().contains(&q)
-                && !self.map.to_lowercase().contains(&q)
+                && !self.country.to_lowercase().contains(&q)
                 && !self.ip.contains(&q)
             {
                 return false;
@@ -96,7 +96,7 @@ impl DayZServer {
         }
         if !filters.map_filter.is_empty() {
             if !self
-                .map
+                .country
                 .to_lowercase()
                 .contains(&filters.map_filter.to_lowercase())
             {
@@ -186,8 +186,12 @@ pub async fn fetch_servers(search: &str) -> Result<Vec<DayZServer>> {
         .await?;
 
     // Parse as raw JSON Value — won't fail due to unexpected fields
-    let root: Value = serde_json::from_str(&text)
-        .map_err(|e| anyhow::anyhow!("JSON parse error: {e}\nBody: {}", &text[..text.len().min(500)]))?;
+    let root: Value = serde_json::from_str(&text).map_err(|e| {
+        anyhow::anyhow!(
+            "JSON parse error: {e}\nBody: {}",
+            &text[..text.len().min(500)]
+        )
+    })?;
 
     let data = root
         .get("data")
@@ -210,9 +214,7 @@ pub async fn fetch_servers(search: &str) -> Result<Vec<DayZServer>> {
             Some(p) => p as u16,
             None => continue,
         };
-        let name = json_str(attrs, "name")
-            .unwrap_or("Unknown")
-            .to_string();
+        let name = json_str(attrs, "name").unwrap_or("Unknown").to_string();
         let players = json_u64(attrs, "players").unwrap_or(0) as u32;
         let max_players = json_u64(attrs, "maxPlayers").unwrap_or(0) as u32;
 
@@ -220,11 +222,8 @@ pub async fn fetch_servers(search: &str) -> Result<Vec<DayZServer>> {
         let empty = Value::Object(Default::default());
         let details = attrs.get("details").unwrap_or(&empty);
 
-        // Map name — try several known field names
-        let map = json_str(details, "map")
-            .or_else(|| json_str(details, "mapName"))
-            .unwrap_or("Unknown")
-            .to_string();
+        // country
+        let country = json_str(attrs, "country").unwrap_or("Unknown").to_string();
 
         // Server type
         let is_official = json_bool(details, "official");
@@ -239,10 +238,8 @@ pub async fn fetch_servers(search: &str) -> Result<Vec<DayZServer>> {
 
         // Other detail fields
         let is_hardcore = json_bool(details, "hardcore");
-        let has_battleye = json_bool(details, "battleye")
-            || json_bool(attrs, "battleye");
-        let time_of_day = json_f64(details, "time")
-            .unwrap_or(12.0) as f32;
+        let has_battleye = json_bool(details, "battleye") || json_bool(attrs, "battleye");
+        let time_of_day = json_f64(details, "time").unwrap_or(12.0) as f32;
 
         // Mods — array of objects with "name" or "id"
         let mods: Vec<String> = details
@@ -267,7 +264,7 @@ pub async fn fetch_servers(search: &str) -> Result<Vec<DayZServer>> {
             max_players,
             ping_ms: None,
             server_type,
-            map,
+            country,
             is_hardcore,
             has_battleye,
             time_of_day,
@@ -293,10 +290,9 @@ async fn ping_server(ip: &str, port: u16) -> Option<u32> {
     // A2S_INFO request packet
     let payload: &[u8] = &[
         0xFF, 0xFF, 0xFF, 0xFF, // header
-        0x54,                   // A2S_INFO
-        b'S', b'o', b'u', b'r', b'c', b'e', b' ',
-        b'E', b'n', b'g', b'i', b'n', b'e', b' ',
-        b'Q', b'u', b'e', b'r', b'y', 0x00,
+        0x54, // A2S_INFO
+        b'S', b'o', b'u', b'r', b'c', b'e', b' ', b'E', b'n', b'g', b'i', b'n', b'e', b' ', b'Q',
+        b'u', b'e', b'r', b'y', 0x00,
     ];
 
     let addr = format!("{}:{}", ip, port);
