@@ -20,7 +20,7 @@ async fn main() -> anyhow::Result<()> {
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("DayZ Launcher")
-            .with_inner_size([1100.0, 680.0])
+            .with_inner_size([1200.0, 680.0])
             .with_min_inner_size([900.0, 580.0])
             .with_resizable(true),
 

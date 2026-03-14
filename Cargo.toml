@@ -2,7 +2,7 @@
 name = "dayz-launcher"
 version = "0.1.0"
 edition = "2021"
-authors = ["Twoje Imię <email@example.com>"]
+authors = ["Paweł Harasymowicz <owner@gmshage.com>"]
 description = "Niestandardowy launcher dla DayZ"
 
 [dependencies]
